@@ -1,0 +1,169 @@
+import React, {useEffect, useState} from "react";
+import TableCustom from "@/components/TableList/TableCustom";
+import {
+    Col, Form, Input, Row, Button, Select, message, Popconfirm,
+} from "antd";
+import service, {api} from "@/services/services";
+import {POST} from "@/utils/request";
+import AddressInfo from "@/pages/data/patent/apply/addressInfo";
+import SqrInfo from "@/pages/data/patent/apply/sqrInfo";
+import UplordFile from "@/pages/data/trademark/uplordFile";
+import AuthorityControl from "@/components/AuthorityControl";
+import permission from "@/utils/permission";
+
+
+const {Option} = Select;
+// 表格数据操作
+let handleRefresh;
+
+const Index = () => {
+    const [visible, setVisible] = useState(false);
+    const [uplord, setUplord] = useState(false);
+    const [sqrVisible, setSqrVisible] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [initialValue, setInitialValue] = useState({});
+    const [codeList,setCodeList]  =  useState([]);
+    const [indexType,setIndexType]  =  useState('');
+
+    const getStartValues = ()=>{
+        POST(api.data.area.treeList,{}).then(data => {
+            if (data) {
+                const {list} = data;
+                setCodeList(list);
+            }
+        })
+    };
+
+    useEffect( ()=>getStartValues(),[] );
+
+    // 搜索区域
+    const renderSimpleForm = (form, handleSearch, handleReset) => {
+        return (
+            <Form className="ant-advanced-search-form">
+                <Row gutter={24}>
+                    <Col span={4}>
+                        <Form.Item label="申请号">
+                            {form.getFieldDecorator('tmNo')(<Input placeholder="请输入"/>)}
+                        </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                        <Button htmlType="submit" icon="search" type="primary"
+                                onClick={() => handleSearch()}>查询</Button>
+                        <Button style={{marginLeft: 10}} onClick={handleReset} icon={'reload'}>重置</Button>
+                        <AuthorityControl permission={['otherTrade:geoIndication:add']}>
+                            <Button onClick={() => {setUplord(true)}} type="primary" loading={loading}
+                                    style={{marginLeft: 10}}>上传文件</Button>
+                        </AuthorityControl>
+                    </Col>
+                </Row>
+            </Form>
+        )
+    };
+
+    // 列表需要显示的字段
+    let columns = [
+        {
+            title: '申请号',
+            dataIndex: 'tmNo',
+            width: 80,
+        },
+        {
+            title: '分类号',
+            dataIndex: 'internationalClass',
+            width: 80,
+        },
+        {
+            title: '申请日',
+            dataIndex: 'applyDate',
+            width: 80,
+        },
+        {
+            title: '商标名称',
+            dataIndex: 'tmName',
+            width: 100,
+        },
+        {
+            title: '申请人',
+            dataIndex: 'pubsqr',
+            width: 100,
+        },
+        {
+            title: '申请人地址',
+            dataIndex: 'shenqingrdz',
+            width: 150,
+        },
+        {
+            title: '初审日期',
+            dataIndex: 'firstExamIssueDate',
+            width: 100,
+        },
+        {
+            title: '注册日期',
+            dataIndex: 'registerIssueDate',
+            width: 100,
+        },
+        {
+            title: '截止日期',
+            dataIndex: 'rightEndDate',
+            width: 100,
+        },
+        {
+            title: '法律状态',
+            dataIndex: 'legalStatus',
+            width: 100,
+        },
+    ];
+
+    if (permission.check(['otherTrade:geoIndication:add'],'ALL')) {
+        columns = [
+            ...columns,
+            {
+                title: '操作',
+                dataIndex: 'operation',
+                width: '50px',
+                render: (text, record) => (
+                    <>
+                        <AuthorityControl permission={['otherTrade:geoIndication:add']}>
+                            <Popconfirm title="确认删除吗?" onConfirm={() => {
+                                POST(api.otherTrade.del, {id:record.id}).then(data => {
+                                    if (data) {
+                                        message.success("删除成功");
+                                        handleRefresh();
+                                    }
+                                })
+                            }}>
+                                <Button icon="delete" type="link" size={"small"}>删除</Button>
+                            </Popconfirm>
+                        </AuthorityControl>
+                    </>
+                ),
+            },
+        ];
+    }
+
+    const showEdit = (record,operType)=>{
+        setVisible(true);
+    };
+
+
+    return (
+        <>
+            <TableCustom
+                rowKey="id"
+                search={renderSimpleForm}
+                api={api.otherTrade.list}
+                listName="list"
+                handleRefresh={func => handleRefresh = func}
+                columns={columns}
+                scorll={{y: '65vh'}}
+                params={{tmType:'G'}}
+            />
+            {uplord ?
+                <UplordFile fileType={'22'} visible={uplord} setVisible={setUplord}/>
+                :''}
+        </>
+    );
+};
+
+export default Form.create()(Index);
+
